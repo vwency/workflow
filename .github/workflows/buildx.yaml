@@ -7,6 +7,16 @@ on:
         description: "The name of the image to build"
         required: true
         type: string
+      context:
+        description: "Build context path"
+        required: false
+        type: string
+        default: "."
+      dockerfile:
+        description: "Path to Dockerfile"
+        required: false
+        type: string
+        default: "./Dockerfile"
     secrets:
       personal_access_token:
         required: true
@@ -28,9 +38,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.personal_access_token }}
 
-      - name: Set branch name as environment variable
-        run: echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
-
       - name: Build and push with timestamp and branch tag
         run: |
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
@@ -43,7 +50,7 @@ jobs:
 
           docker buildx build \
             --platform linux/amd64 \
-            -f ./Dockerfile \
+            -f ${{ inputs.dockerfile }} \
             -t ghcr.io/${{ inputs.image-name }}:$IMAGE_TAG \
             -t ghcr.io/${{ inputs.image-name }}:$BRANCH_TAG \
-            --push .
+            --push ${{ inputs.context }}
