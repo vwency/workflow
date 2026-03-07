@@ -1,0 +1,51 @@
+name: Delete Old Images
+
+on:
+  workflow_call:
+    inputs:
+      owner:
+        description: "The owner of the repository (organization or user)"
+        required: false
+        type: string
+        default: ${{ github.repository_owner }}
+      repository:
+        description: "The name of the repository where cleanup will happen"
+        required: true
+        type: string
+      package:
+        description: "The name of the package to clean up in GHCR"
+        required: true
+        type: string
+      keep_un_tagged:
+        description: "The number of un tagged images to keep"
+        required: false
+        type: number
+        default: 1
+      keep_n_tagged:
+        description: "The number of tagged images to keep"
+        required: false
+        type: number
+        default: 1
+      dry_run:
+        description: "Perform a dry run without deleting images"
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      personal_access_token:
+        required: true
+
+jobs:
+  cleanup-docker-images:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cleanup Docker images from GHCR
+        uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          token: ${{ secrets.personal_access_token }}
+          owner: ${{ github.repository_owner }}
+          repository: ${{ inputs.repository }}
+          keep-n-untagged: ${{ inputs.keep_un_tagged }}
+          keep-n-tagged: ${{ inputs.keep_n_tagged }}
+          package: ${{ inputs.package }}
+          dry-run: ${{ inputs.dry_run }}
