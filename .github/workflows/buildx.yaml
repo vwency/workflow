@@ -17,6 +17,11 @@ on:
         required: false
         type: string
         default: "./Dockerfile"
+      build-args:
+        description: "Build args in format KEY=VALUE, one per line"
+        required: false
+        type: string
+        default: ""
     secrets:
       personal_access_token:
         required: true
@@ -44,6 +49,11 @@ jobs:
           IMAGE_TAG="${{ github.ref_name }}-$TIMESTAMP"
           BRANCH_TAG="${{ github.ref_name }}"
 
+          BUILD_ARGS=""
+          while IFS= read -r arg; do
+            [ -n "$arg" ] && BUILD_ARGS="$BUILD_ARGS --build-arg $arg"
+          done <<< "${{ inputs.build-args }}"
+
           echo "Building and pushing image:"
           echo " - ghcr.io/${{ inputs.image-name }}:$IMAGE_TAG"
           echo " - ghcr.io/${{ inputs.image-name }}:$BRANCH_TAG"
@@ -51,6 +61,7 @@ jobs:
           docker buildx build \
             --platform linux/amd64 \
             -f ${{ inputs.dockerfile }} \
+            $BUILD_ARGS \
             -t ghcr.io/${{ inputs.image-name }}:$IMAGE_TAG \
             -t ghcr.io/${{ inputs.image-name }}:$BRANCH_TAG \
             --push ${{ inputs.context }}
