@@ -1,0 +1,46 @@
+name: Push Helm chart to GHCR
+
+on:
+  workflow_call:
+    inputs:
+      chart-path:
+        description: "Path to Helm chart"
+        required: false
+        type: string
+        default: "./helm/backend-chart"
+    secrets:
+      personal_access_token:
+        required: true
+
+jobs:
+  helm-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: "3.14.0"
+
+      - name: Log in to GHCR
+        run: |
+          echo "${{ secrets.personal_access_token }}" | \
+            helm registry login ghcr.io \
+              --username ${{ github.actor }} \
+              --password-stdin
+
+      - name: Lint chart
+        run: helm lint ${{ inputs.chart-path }}
+
+      - name: Package and push chart to GHCR
+        run: |
+          CHART_NAME=$(helm show chart ${{ inputs.chart-path }} | grep '^name:' | awk '{print $2}')
+          CHART_VERSION=$(helm show chart ${{ inputs.chart-path }} | grep '^version:' | awk '{print $2}')
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+
+          helm package ${{ inputs.chart-path }} --version "${CHART_VERSION}-${TIMESTAMP}"
+          helm push "${CHART_NAME}-${CHART_VERSION}-${TIMESTAMP}.tgz" \
+            oci://ghcr.io/${OWNER}/helm
