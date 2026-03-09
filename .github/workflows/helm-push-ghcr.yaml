@@ -4,10 +4,13 @@ on:
   workflow_call:
     inputs:
       chart-path:
-        description: "Path to Helm chart"
         required: false
         type: string
         default: "./helm/backend-chart"
+      registry-suffix:
+        required: false
+        type: string
+        default: ""
     secrets:
       personal_access_token:
         required: true
@@ -41,6 +44,12 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
 
+          if [ -n "${{ inputs.registry-suffix }}" ]; then
+            OCI_PATH="oci://ghcr.io/${OWNER}/${{ inputs.registry-suffix }}"
+          else
+            OCI_PATH="oci://ghcr.io/${OWNER}"
+          fi
+
           helm package ${{ inputs.chart-path }} --version "${CHART_VERSION}-${TIMESTAMP}"
-          helm push "${CHART_NAME}-${CHART_VERSION}-${TIMESTAMP}.tgz" \
-            oci://ghcr.io/${OWNER}/helm
+          helm push "${CHART_NAME}-${CHART_VERSION}-${TIMESTAMP}.tgz" "${OCI_PATH}"
+          
